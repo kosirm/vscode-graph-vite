@@ -1,2 +1,2 @@
-# vscode-(ms)graph-vite
+# vscode-(jssm)graph-vite
 
