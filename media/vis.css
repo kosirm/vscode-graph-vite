@@ -1,0 +1,52 @@
+html, body{
+	margin:0px;
+}
+.vis-network {
+	background-color: rgb(242, 242, 246);
+}
+.wrapper {
+	display: flex;
+	height: 100vh;
+}
+
+#network {
+	flex: 1;
+	/* border: 1px solid #ddd; */
+}
+
+/*minimap*/
+.hidden{
+	display: none;
+}
+
+.minimapRadar {
+	position: absolute;
+	background-color: rgba(16, 84, 154, 0.16);
+	/* border: 1px solid rgba(16, 84, 154, 0.14);
+	outline: 5px solid rgba(16, 84, 154, 0.16); */
+}
+
+.minimapImage {
+	position: absolute;
+}
+
+.minimapWrapperIdle {
+	/* display:inline; */
+	opacity: 0.8;
+	transition: opacity 0.5s;
+}
+
+.minimapWrapperMove {
+	opacity: 0.95;
+	transition: opacity 0.5s;
+}
+/*WINBOX*/
+.wb_title{
+	padding:10px;
+}
+
+.wb-min{
+	background-color: #4e92edbf;
+	border: 1px solid #2168c6bf;
+	background-position: center !important;
+}

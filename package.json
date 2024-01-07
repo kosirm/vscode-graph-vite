@@ -1,0 +1,51 @@
+{
+  "name": "vscode-vite-bundle",
+  "displayName": "vscode-vite-bundle",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+		"commands": [
+			{
+				"command": "smGraph.start",
+				"title": "Start SM Graph session",
+				"category": "SM Graph"
+			},
+			{
+				"command": "smGraph.doRefactor",
+				"title": "Do some Sm Graph Command",
+				"category": "SM Graph"
+			}
+		],
+		"keybindings": [
+            {
+                "command": "smGraph.start",
+                "key": "shift+alt+U"
+            }
+        ]
+  },
+  "scripts": {
+    "compile": "vite build",
+    "watch": "vite build --watch",
+    "package": "vite build --mode production"
+  },
+    "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  }
+}
