@@ -14,9 +14,9 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('smGraph.doRefactor', () => {
+		vscode.commands.registerCommand('smGraph.talkToMe', () => {
 			if (SMGraphPanel.currentPanel) {
-				SMGraphPanel.currentPanel.doRefactor();
+				SMGraphPanel.currentPanel.talkToMe();
 			}
 		})
 	);
@@ -121,7 +121,7 @@ class SMGraphPanel {
 		);
 	}
 
-	public doRefactor() {
+	public talkToMe() {
 		// Send a message to the webview webview.
 		// You can send any JSON serializable data.
 		// E ovdje mogu poslati strukturu vis.js networka...

@@ -1,2 +1,6 @@
 # vscode-(jssm)graph-vite
 
+vite radi, i stvarno je brži od tsc-ja ! Yuppi!
+
+ok, ovaj miniview mi je užasno ružan, ne znam da li da ga izbacim...
+ako bi bio svg, to bi možda još na nešto ličilo, a ovo je stvarno ružno...

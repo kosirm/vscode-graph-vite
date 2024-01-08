@@ -19,8 +19,8 @@
 				"category": "SM Graph"
 			},
 			{
-				"command": "smGraph.doRefactor",
-				"title": "Do some Sm Graph Command",
+				"command": "smGraph.talkToMe",
+				"title": "Do some Graph Command",
 				"category": "SM Graph"
 			}
 		],
