@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const cats = {
+const views = {
 	'SM Graph': 'one',
 	'Mindmap': 'two',
 	'JSSM': 'three'
@@ -9,7 +9,7 @@ const cats = {
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('smGraph.start', () => {
-			SMGraphPanel.createOrShow(context.extensionUri);
+			SMGraphPanel.createOrShow(context.extensionUri);	
 		})
 	);
 
@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		})
 	);
-
+	
 	if (vscode.window.registerWebviewPanelSerializer) {
 		// Make sure we register a serializer in activation event
 		vscode.window.registerWebviewPanelSerializer(SMGraphPanel.viewType, {
@@ -125,8 +125,9 @@ class SMGraphPanel {
 		// Send a message to the webview webview.
 		// You can send any JSON serializable data.
 		// E ovdje mogu poslati strukturu vis.js networka...
-		this._panel.webview.postMessage({ command: 'refactor' });
+		this._panel.webview.postMessage({ command: 'talkToMe' });
 	}
+
 
 	public dispose() {
 		SMGraphPanel.currentPanel = undefined;
@@ -148,21 +149,21 @@ class SMGraphPanel {
 		// Vary the webview's content based on where it is located in the editor.
 		switch (this._panel.viewColumn) {
 			case vscode.ViewColumn.Two:
-				this._updateForCat(webview, 'Mindmap');
+				this._updateView(webview, 'Mindmap');
 				return;
 
 			case vscode.ViewColumn.Three:
-				this._updateForCat(webview, 'JSSM');
+				this._updateView(webview, 'JSSM');
 				return;
 
 			case vscode.ViewColumn.One:
 			default:
-				this._updateForCat(webview, 'SM Graph');
+				this._updateView(webview, 'SM Graph');
 				return;
 		}
 	}
 
-	private _updateForCat(webview: vscode.Webview, catName: keyof typeof cats) {
+	private _updateView(webview: vscode.Webview, catName: keyof typeof views) {
 		this._panel.title = catName;
 		this._panel.webview.html = this._getHtmlForWebview(webview);
 	}
@@ -218,11 +219,6 @@ class SMGraphPanel {
 				<!-- #region HTLM -->
 					<div class="wrapper">
 						<div id="network"></div>
-						<div id="minimapWrapper" 
-							style="position: absolute; margin: 5px; border: 1px solid #ddd; overflow: hidden; background-color: #FFF; z-index: 9;" class="minimapWrapperIdle">
-							<img id="minimapImage" class="minimapImage">
-							<div id="minimapRadar" class="minimapRadar"></div>
-						</div>
 					</div>
 				<!-- #endregion HTLM -->
 				<script nonce="${nonce}" src="${scriptUri}"></script>

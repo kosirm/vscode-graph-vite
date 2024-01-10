@@ -20,7 +20,7 @@
 			},
 			{
 				"command": "smGraph.talkToMe",
-				"title": "Do some Graph Command",
+				"title": "Talk to me!",
 				"category": "SM Graph"
 			}
 		],
@@ -28,7 +28,11 @@
             {
                 "command": "smGraph.start",
                 "key": "shift+alt+U"
-            }
+            },
+            {
+              "command": "smGraph.talkToMe",
+              "key": "shift+alt+I"
+          }
         ]
   },
   "scripts": {
