@@ -2,7 +2,7 @@ html, body{
 	margin:0px;
 }
 .vis-network {
-	/* background-color: rgb(242, 242, 246); */
+	color: inherit;
 }
 .wrapper {
 	display: flex;
@@ -65,4 +65,11 @@ html, body{
 .wb-min{
 	background-position: center !important;
 	background-size: 12px;;
+}
+.icon:hover{
+	color:#0078D4;
+} 
+
+.active{
+	color:#0078D4;
 }

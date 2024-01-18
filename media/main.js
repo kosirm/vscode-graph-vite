@@ -1,6 +1,5 @@
 (function () {
     const vscode = acquireVsCodeApi();
-
     //#region UTILS
     // kudos to beloved jquery
     var $ = function (id) { return document.getElementById(id); };
@@ -12,6 +11,7 @@
     });
     winbox.body.innerHTML = /*html*/`
         <div id="nodes" class="">
+            <div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
             <label class="label">Nodes</label><br>
             <input class="input" type="text" id="state_label" value="State"><br>
             <input class="input" type="color" id="state_color" value="#ae5e17"><br>
@@ -26,6 +26,7 @@
         .removeControl("wb-full")
         .removeControl("wb-close")
         .resize("300px", "200px");
+        
 
     function winboxToogle() {
         winbox.hidden ?
@@ -33,55 +34,90 @@
             winbox.hide();
     }
 
+    document.getElementById("winbox-1").addEventListener('dblclick', function (e) {
+            console.log("winbox dblclick event");
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    // winbox.addEventListener('dblclick', function () {
+    //     console.log("winbox dblclick");
+    //     return false;
+    // });
     //#endregion WINBOX
 
     //#region Keyboard shortcuts
+    function prepareJSON() {
+        var jsonNodes = JSON5.stringify(nodes.get());
+        var jsonEdges = JSON5.stringify(edges.get());
+        // var jsonNodes = JSON5.stringify(nodes.get(), replaceStringWithNumber);
+        // var jsonEdges = JSON5.stringify(edges.get(), replaceStringWithNumber);
+        // var mydata = (jsonNodes+","+jsonEdges);
+        var mydata = ('{\n"nodes":' + jsonNodes + ',\n"edges":' + jsonEdges + '\n}')
+            .replace(/\],\[/g, "],\n[")
+            .replace(/\[\{/g, "[\n\t\t{")
+            .replace(/\},\{/g, "},\n\t\t{")
+            .replace(/\}\]/g, "}\n\t]");
+        // console.log(mydata);
+        console.log("json5 data:",mydata);
+        return mydata;
+    }
+
+    function replaceStringWithNumber(key, value) {
+        if (!isNaN(value)) {
+            let change = parseFloat(value);
+            return change;
+        }
+        return value;
+    }
+
+    let addEdgeModeState = false;
+    function toogleEdgeMode() {
+        if (addEdgeModeState === false) { network.addEdgeMode(); addEdgeModeState = true; }
+        else { network.disableEditMode(); addEdgeModeState = false; }
+        console.log("edge mode state: ", addEdgeModeState);
+    }
+
     document.addEventListener("keydown", function (e) {
         var ctrl = (e.ctrlKey);
         var alt = (e.altKey);
         if (e.key === 's' && ctrl) { e.preventDefault();/* console.log('ctlr+s'); */ }
         else if (e.key === 'j' && ctrl) { e.preventDefault();/* console.log('ctlr+j'); */winboxToogle(); }
-        else if (e.key === 'k' && ctrl) { e.preventDefault();/* console.log('ctlr+k'); */ }
+        else if (e.key === 'k' && ctrl) { e.preventDefault();/* console.log('ctlr+k'); */ console.log(extNodeArray); }
+        // else if (e.key === 'f' && ctrl) { e.preventDefault();/* console.log('ctlr+f'); */ console.log(sm.actions()); network.selectNodes([sm.state()]); }
         else if (e.key === 'd') { e.preventDefault();/* console.log('ctlr+k'); */ network.deleteSelected(); }
         else if (e.key === 'l' && ctrl) { e.preventDefault();/* console.log('ctlr+l'); */ network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } }); }
-        else if (e.key === 'l' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ addEdge(); }
-        else if (e.key === 'a') { e.preventDefault();/* console.log('ctlr+m'); */ network.addEdgeMode({label:"action"}); }
+        else if (e.key === 'a') { e.preventDefault();/* console.log('ctlr+m'); */ toogleEdgeMode(); }
         else if (e.key === 'p') { e.preventDefault(); winboxToogle(); }
         else if (e.key === 'i' && ctrl) { e.preventDefault(); console.log(Math.max(...nodes.getIds())); }
-        else if (e.key === 'u' && ctrl) { e.preventDefault();/* console.log('ctlr+u'); */ }
+        else if (e.key === 'u' && ctrl) { e.preventDefault();/* console.log('ctlr+u'); */ vscode.postMessage({ command: 'alert', text: '🐛 Poruka iz iframe-a u vscode ' }); }
+        else if (e.key === 'h' && ctrl) { e.preventDefault();/* console.log('ctlr+u'); */ $('fi').classList.toggle("active"); }
         else if (e.key === 'z' && ctrl) { e.preventDefault();/* console.log('ctlr+z'); */ }
-        else if (e.key === 'f' && ctrl) { e.preventDefault();/* console.log('ctlr+f'); */ focusNode(); }
+        else if (e.key === 'w' && alt) { e.preventDefault();/* console.log('ctlr+t'); */ focusNode(); }
+        else if (e.key === 'l' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ addEdge(); }
+        else if (e.key === 'č' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ prepareJSON(); }
+        else if (e.key === 'ć' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ sendNodesToCode(prepareJSON()); }
     }, false);
     //#endregion Keyboard shortcuts
 
-    //#region Data
-    var nC = "#0078D4";
-    var eC = "#0078D4";
-    const nodes = new vis.DataSet([
-        { id: 1, label: 'Node 1', x: '29', y: '-87', color: nC },
-        { id: 2, label: 'Node 2', x: '-121', y: '127', color: nC },
-        { id: 3, label: 'Node 3', x: '290', y: '124', color: nC },
-        { id: 4, label: 'Node 4', x: '-271', y: '-54', color: nC },
-        { id: 5, label: 'Node 5', x: '363', y: '-78', color: nC },
-    ]);
-    // node_ids = nodes.getIds();
-    const edges = new vis.DataSet([
-        { from: 1, to: 2, label: "action", color: eC },
-        { from: 1, to: 3, label: "action", color: eC },
-        { from: 2, to: 3, label: "action", color: eC },
-        { from: 2, to: 4, label: "action", color: eC },
-        { from: 3, to: 5, label: "action", color: eC }
-    ]);
-    // edge_ids = edges.getIds()
+    var fsm;
+
+    var nodeArray = [];
+    const nodes = new vis.DataSet(nodeArray);
+
+    // var edgeArray = extEdgeArray;
+    var edgeArray = [];
+    const edges = new vis.DataSet(edgeArray);
+
     //#endregion Data
     var changeChosenEdge = function (values, id, selected, hovering) {
-        // values.width = 3;
+        values.width = 3;
         values.color = "#3aa73a";
         // values.toArrowScale = 2;
         // values.arrowStrikethrough = false;
     };
     var changeChosenNode = function (values, id, selected, hovering) {
-        // values.width = 3;
+        values.borderWidth = 10;
+        values.borderColor = "#3aa73a";
         values.color = "#3aa73a";
         // values.toArrowScale = 2;
         // values.arrowStrikethrough = false;
@@ -102,7 +138,7 @@
         edges: {
             "smooth": {
                 "type": "curvedCCW",
-                "roundness": 0.2
+                "roundness": 0.15
             },
             font: { align: "top", color: "white", size: 14, face: "Segoe UI", strokeWidth: 0 },
             // chosen: {
@@ -128,6 +164,15 @@
             hover: true,
             multiselect: true
         },
+        manipulation: {
+            enabled: false,
+            addEdge: function (edgeData, callback) {
+                if (edgeData.from !== edgeData.to) {
+                    customAddEdgeMode(edgeData.from, edgeData.to);
+                }
+                network.addEdgeMode();
+            }
+        }
     };
     //#endregion Network options
 
@@ -146,9 +191,15 @@
         }
     });
 
+    network.addEventListener("dragEnd", function (e) {
+        // ovdje bi mogao poslati updated node JSON
+        network.storePositions();
+    });
+
     var selectedNodes;
     var selectedNodesObj;
     network.addEventListener('selectNode', function () {
+        // ovdje bi mogao poslati selected Nodes za highlight u JSON
         selectedNodes = network.getSelectedNodes();
         console.log("nodes", selectedNodes);
         console.log("nodes+", nodes.get(selectedNodes));
@@ -161,6 +212,7 @@
         selectedEdges = network.getSelectedEdges();
         console.log("edges", selectedEdges);
         console.log("edges+", edges.get(selectedEdges));
+        console.log("all edges", edges.get());
     });
 
     var hover = false;
@@ -180,22 +232,43 @@
 
     function focusNode() {
         if (selectedNodes) {
-            var options = { animation: { duration: 1000, easingFunction: "easeInOutQuad" } };
+            var options = { animation: { duration: 1000, easingFunction: "easeInOutQuad" }, scale: 1 };
             var node = selectedNodes[0];
-            console.log("selected nodes [0]:", selectedNodes[0]);
-            console.log("focus");
+            // console.log("selected nodes [0]:", selectedNodes[0]);
+            // console.log("focus");
             network.focus(node, options);
         }
     }
 
-    function addEdge(from, to) {
-        if (selectedNodes.length === 2) {
-            edges.update([{ from: selectedNodes[0], to: selectedNodes[1], label: "action", color: eC }]);
+    function customAddEdgeMode(from, to) {
+        let filteredEdges = [];
+        let allEdges = edges.get();
+        for (let i = 0; i < edges.length; i++) {
+            if (allEdges[i].from === from && allEdges[i].to === to) {
+                filteredEdges = [...filteredEdges, allEdges[i]];
+            }
+        }
+        if (filteredEdges.length === 0) {
+            var newId = Math.max(...(edges.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
+            console.log("new edge id",newId);
+            edges.update([{ id: newId, $:2,from: from, to: to, name:newId, label: "action", color: "#0078D4" }]);
         }
     }
+
+
+    function addEdge(from, to) {
+        if (selectedNodes.length === 2) {
+            console.log("adding edge");
+            var newId =  Math.max(...(edges.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
+            console.log("new edge id",newId);
+            edges.update([{ id: newId, $: 2, from: selectedNodes[0], to: selectedNodes[1], name:newId, label: "action", color: "#0078D4" }]);
+        }
+    }
+
     function addNode(x, y) {
-        var newId = Math.max(...nodes.getIds()) + 1;
-        nodes.update([{ id: newId, label: 'New Node', x: x, y: y, color: nC }]);
+        var newId = Math.max(...(nodes.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
+        console.log("new node id",newId);
+        nodes.update([{ id: newId, $:1, label: 'New Node', x: x, y: y, color: "#0078D4" }]);
     }
 
     function updateNodes() {
@@ -205,15 +278,83 @@
     function updateEdges() {
 
     }
+
+    // send data to vscode:
+    function sendNodesToCode(data) {
+        // vscode.postMessage({command: 'nodes', text: JSON.stringify(obj)});
+        vscode.postMessage({ command: 'nodes', text: data });
+    }
     //#endregion Node utils
 
-    // Handle messages sent from the extension to the webview
+
+    // ok, ovdje pošaljem JSON u iframe
+    // ok, let think in terms of state
+    // first state: nothing is opened
+    // only smgraph.js is opened
+    // only smgraph is opened
+    // both are opened 
+    // da li mogu to provjeriti odavdje?
+    // ne, to bi trebao provjeriti u extension.js
+    // tamo dakle trebam postaviti logiku za slanje podataka, webview neka samo prima podatke 
     window.addEventListener('message', event => {
         const message = event.data; // The json data that the extension sent
-        switch (message.command) {
-            case 'talkToMe':
-                console.log("talkToMe");
-            break;
+        // console.log("message: ", message.data);
+        if (typeof message.data === "undefined") {
+            console.log("don't do anything for now...");
+        }
+        else {
+            switch (message.command) {
+                case 'sendDataToWebview':
+                    console.log(message.data);
+                    // nodeArray = message.data.nodes;
+                    // edgeArray = message.data.edges;
+                    nodes.update(message.data.nodes);
+                    edges.update(message.data.edges);
+                    //state machine
+                    // var trans = JSON.stringify(edges.get());
+                    // smtrans = JSON.parse(trans);
+                    // const rewriteList = ['label'];
+                    // const label = "label";
+                    // function replacer(key, value) {
+                    //     if (typeof value === 'object' && !value[Symbol.iterator]) {
+                    //         rewriteList.forEach(prop => {
+                    //             if (value[prop]) {
+                    //                 value.action = value[prop];
+                    //                 delete value[prop];
+                    //             }
+                    //         });
+                    //     }
+                    //     return value;
+                    // }
+                    // var newTrans = JSON.stringify(smtrans, replacer);
+                    // finalTrans = JSON.parse(newTrans);
+                    // console.log("SM Edges", finalTrans);
+                    // jssmdata = { start_states: [1], end_states: [5], transitions: finalTrans };
+                    var transitions = edges.get();
+                    console.log("transitions: ",transitions);
+                    // const unquoted = trans.replace(/"([^"]+)":/g, '$1:');
+                    fsm = new StateMachine({init: "1a", transitions: transitions, methods: {}});
+                    console.log("ALL STATES: ",fsm.allStates());
+                    console.log("ALL TRANSITIONS: ", fsm.allTransitions());
+                    // sm = new jssm.Machine(jssmdata);
+                    // // end state machine
+                    // upravo razmišljam, da se prebacim na javascript-state-machine...
+                    // 8kb vs 350 kb je velika razlika... možda se i zato ext. tako dugo louda...?
+                    network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
+                    break;
+                case 'highlightNodeOnGraph':
+                    console.log("Node to highlight: ", message.data);
+                    network.unselectAll();
+                    network.selectNodes([message.data]/*, { highlightEdges: false }*/);
+                    // network.fit({ nodes: [message.data], animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
+                    break;
+                case 'highlightEdgeOnGraph':
+                    console.log("Edge to highlight: ", message.data);
+                    network.unselectAll();
+                    network.selectEdges([message.data]);
+                    // network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
+                    break;
+            }
         }
     });
 }());

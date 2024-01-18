@@ -6,5 +6,5 @@ All notable changes to the "vscode-vite-bundle" extension will be documented in 
 
 - Initial release
   changed builder to vite, basic html page with vis.js graph
-
-- 
+- ok, sada treba json2graph... ok to radi
+- sada bi mogao napraviti highlight

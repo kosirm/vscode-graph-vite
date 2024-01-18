@@ -12,35 +12,49 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
-		"commands": [
-			{
-				"command": "smGraph.start",
-				"title": "Start SM Graph session",
-				"category": "SM Graph"
-			},
-			{
-				"command": "smGraph.talkToMe",
-				"title": "Talk to me!",
-				"category": "SM Graph"
-			}
-		],
-		"keybindings": [
-            {
-                "command": "smGraph.start",
-                "key": "shift+alt+U"
-            },
-            {
-              "command": "smGraph.talkToMe",
-              "key": "shift+alt+I"
-          }
-        ]
+    "commands": [
+      {
+        "command": "smGraph.start",
+        "title": "Start SM Graph session",
+        "category": "SM Graph"
+      },
+      {
+        "command": "smGraph.sendDataToWebview",
+        "title": "Send JSON to Graph",
+        "category": "SM Graph"
+      },
+      {
+        "command": "smGraph.createFile",
+        "title": "Create new file",
+        "category": "SM Graph"
+      },
+      {
+        "command": "smGraph.reverse",
+        "title": "Reverse selected text",
+        "category": "SM Graph"
+      }
+    ],
+    "keybindings": [
+      {
+        "key": "shift+alt+U",
+        "command": "smGraph.start"
+      },
+      {
+        "key": "shift+alt+N",
+        "command": "smGraph.createFile"
+      },
+      {
+        "key": "shift+alt+I",
+        "command": "smGraph.sendDataToWebview"
+      }
+    ]
   },
   "scripts": {
     "compile": "vite build",
     "watch": "vite build --watch",
     "package": "vite build --mode production"
   },
-    "devDependencies": {
+  "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
     "@types/vscode": "^1.85.0",
@@ -51,5 +65,8 @@
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.11"
+  },
+  "dependencies": {
+    "json5": "^2.2.3"
   }
 }
