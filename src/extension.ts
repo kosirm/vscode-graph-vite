@@ -1,5 +1,5 @@
+import { match } from 'assert';
 import * as vscode from 'vscode';
-import JSON5 from 'json5';
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
@@ -29,153 +29,255 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(createFileCMD);
 
-	context.subscriptions.push(
-		vscode.commands.registerCommand('smGraph.sendDataToWebview', () => {
-			if (SMGraphPanel.currentPanel) {
-				SMGraphPanel.currentPanel.sendDataToWebview();
-			}
-		})
-	);
+	// ok, ove akcije treba poimenovati i kao takve onda poslati u iframe
+	// znači treba mi imena za akcije i onda neki shortcuti, koji su logični i ne kose se previše sa klasičnim shortcutima
+	// TODO addNodeToogle (alt+Q), addEdgeToogle(alt+W), deleteSelected(alt+d), propertiesToogle(alt+A), 
+	// TODO graph2json(alt+j), json2graph(alt+k), 
+	// TODO simulationStart, simulationNext, simulationBack, simulationRestart -> ovo dolazi kasnije
+	// keys: alt + Q W A G Y X C B N
+
+	context.subscriptions.push(vscode.commands.registerCommand('smGraph.addNodeToggle', () => { if (SMGraphPanel.currentPanel) { SMGraphPanel.currentPanel.addNodeToggle(); } }));
+	context.subscriptions.push(vscode.commands.registerCommand('smGraph.addEdgeToggle', () => { if (SMGraphPanel.currentPanel) { SMGraphPanel.currentPanel.addEdgeToggle(); } }));
+	context.subscriptions.push(vscode.commands.registerCommand('smGraph.deleteSelected', () => { if (SMGraphPanel.currentPanel) { SMGraphPanel.currentPanel.deleteSelected(); } }));
+	context.subscriptions.push(vscode.commands.registerCommand('smGraph.propertiesToogle', () => { if (SMGraphPanel.currentPanel) { SMGraphPanel.currentPanel.propertiesToogle(); } }));
+
+	context.subscriptions.push(vscode.commands.registerCommand('smGraph.json2graph', () => { if (SMGraphPanel.currentPanel) { SMGraphPanel.currentPanel.json2graph(); } }));
+	// context.subscriptions.push(vscode.commands.registerCommand('smGraph.graph2json', () => {if (SMGraphPanel.currentPanel) {SMGraphPanel.currentPanel.graph2json();}}));
+
 
 	if (vscode.window.registerWebviewPanelSerializer) {
 		// Make sure we register a serializer in activation event
 		vscode.window.registerWebviewPanelSerializer(SMGraphPanel.viewType, {
 			async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
-				// console.log(`Got state: ${state}`);
+				// //console.log(`Got state: ${state}`);
 				// Reset the webview options so we use latest uri for `localResourceRoots`.
 				webviewPanel.webview.options = getWebviewOptions(context.extensionUri);
 				SMGraphPanel.revive(webviewPanel, context.extensionUri);
 			}
 		});
 	}
+
+	const reveal = JSON.stringify(vscode.workspace.getConfiguration().get('workbench.editor.revealIfOpen'));
+	// vscode.window.showInformationMessage(reveal);
+	if (reveal === 'false') {
+		vscode.workspace.getConfiguration().update('workbench.editor.revealIfOpen', true);
+	}
 }
-//! ovo radi --- CRAZY !!! --- ali ovo dolazi kasnije, za sada mi još ne treba...
-//! pogotovo jer je prilično opasno, jer user može JSON formatirati na sto načina...
-//! OPASNO JE IČI NA LINE LENGTH, JER KORISNIK MOŽE FORMATIRATI JSON VERTIKALNO...
-//! ZBOG TOGA TRAŽIM DRUGI NAČIN NEŠTO KAO FIND IN FILES
+// TODO  clean whole file
 var dataLoadedInGraph = false;
+var activeLine = vscode.window.activeTextEditor.selection.active.line;
+var oldActiveLine = vscode.window.activeTextEditor.selection.active.line;
+var currentEditor: vscode.TextEditor;
+var change = false;
+vscode.workspace.onDidOpenTextDocument((e) => {
+	change = true;
+});
+vscode.workspace.onDidCloseTextDocument((e) => {
+	change = true;
+});
+// vscode.window.onDidChangeWindowState((e)=>{
+// 	change = true;
+// });
+vscode.window.onDidChangeActiveTextEditor((e) => {
+	change = true;
+});
+vscode.window.onDidChangeTextEditorViewColumn((e) => {
+	change = true;
+});
+vscode.workspace.onDidChangeTextDocument(function (e) {
+	change = true;
+});
+const decorationType = vscode.window.createTextEditorDecorationType({
+	// backgroundColor: 'rgba(17, 224, 89, 0.17)',
+	border: '2px solid rgba(58, 167, 58,1)',
+});
 vscode.window.onDidChangeTextEditorSelection((e) => {
-	// console.log('selection', e);
-	const editor = vscode.window.activeTextEditor;
-	if (editor && dataLoadedInGraph === true) {
-		if (e.textEditor.document.uri.path.includes("smgraph.js")) {
-			// console.log(e);
-			const { text } = editor.document.lineAt(editor.selection.active.line);
-			if (text.includes('$:1')) {
-				var id = text.match(/^.*\{id:'(.*?)'/);
-				console.log("regex id",id);
+	currentEditor = vscode.window.activeTextEditor;
+	activeLine = currentEditor.selection.active.line;
+	if (SMGraphPanel.currentPanel && currentEditor.document.fileName.includes(".sm.json")) {
+		// json2graph pozovem samo, ako je file promjenjen
+		console.log("Change? ", change);
+		if (change) {
+			SMGraphPanel.currentPanel.json2graph();
+			change = false;
+		}
+		if (activeLine === oldActiveLine) { return; }
+		//console.log("Active Line: ", activeLine);
+		if (currentEditor && dataLoadedInGraph === true) {
+			const { text } = currentEditor.document.lineAt(activeLine);
+			var line = vscode.window.activeTextEditor!.selection.active.line;
+			const rangeStart = currentEditor.document.lineAt(activeLine).range.start.character;
+			const rangeEnd = currentEditor.document.lineAt(activeLine).range.end.character;
+			var range = new vscode.Range(line, rangeStart, line, rangeEnd);
+			if (text.includes('"x":')) {
+				currentEditor.setDecorations(decorationType, [range]);
+				var id = text.match(/^.*\{"id":"(.*?)"/);
 				var hid = id[1];
-				// ok prije nego pošaljem podatke, trebam provjeriti, da li je SMGraph uopče otvoren
-				// pored toga, da li je graph u njemu...
-				// console.log("dataLoadedInGraph", dataLoadedInGraph);
+				// console.log("HID (onDidChangeTextEditorSelection): ",hid);
+				SMGraphPanel.currentPanel.json2graph();
 				SMGraphPanel.currentPanel.highlightNodeOnGraph(hid);
+				// ovdje mogu zvat samo updateNode,ali zašto, ako sada radi kako treba? Pored toga gubim oldActiveLine
 			}
-			else if (text.includes('$:2')) {
-				var id = text.match(/^.*\{id:'(.*?)'/);
+			else if (text.includes('"to":')) {
+				currentEditor.setDecorations(decorationType, [range]);
+				var id = text.match(/^.*\{"id":"(.*?)"/);
 				var hid = id[1];
+				// console.log("HID (onDidChangeTextEditorSelection): ",hid);
+				SMGraphPanel.currentPanel.json2graph();
 				SMGraphPanel.currentPanel.highlightEdgeOnGraph(hid);
 			}
 			else {
-				console.log("Niti jedno...");
+				currentEditor.setDecorations(decorationType, []);
+				//console.log("Niti jedno...");
 			}
-			// nakon ovoga mogu poslati line u graf
-			// var myIdArr = text.match(/^[^\d]*(\d+)/);
-			// if (myIdArr![1]){
-			// 	var myId = myIdArr![1];
-			// 	console.log("ID: ",myId);
-			// }
-			var currentLine = e.selections[0].active.line;
-			var curLineStart = new vscode.Position(currentLine, 0);
-			var nextLineStart = new vscode.Position(currentLine + 1, 0);
-			var rangeWithFirstCharOfNextLine = new vscode.Range(curLineStart, nextLineStart);
-			var contentWithFirstCharOfNextLine = editor.document.getText(rangeWithFirstCharOfNextLine);
-			var currentLineLength = contentWithFirstCharOfNextLine.length - 1;
-			// console.log("currentLine: ", currentLine);
-			// console.log("currentLineLength: ", currentLineLength);
-			// console.log("currentLine TxT: ", text);
+			oldActiveLine = activeLine;
 		}
+
 	}
-	// console.log(vscode.window.activeTextEditor?.selections);
+	else {
+		//console.log("Not sm.graph or panel not opened");
+	};
 });
 
-//! ovo če biti korisno (možda) samo za editiranje JSON-a
-// vscode.workspace.onDidChangeTextDocument(handleChange);
-// function handleChange(event: any) {
-// 	const editor = vscode.window.activeTextEditor;
-// 	if (editor) {
-// 		let documentEventJSON = JSON.stringify(event);
-// 		if(documentEventJSON.includes("smgraph.js")){
-// 			// console.log(documentEventJSON);
-// 			// ali bojim se da to vrijedi samo za redak, koji se editira...
-// 			// znači ipak trebam pogledat, kako radi onaj highlighter...
-// 			//! kako sam glup... ime eventa je onDidChangeTextDocument !!! znači sve se to događa samo kod editiranja
-// 			//! za kurzor mi treba neki drug event
-// 			// ok, ovdje dobije text, mogu sparsati ID i napraviti highlight/zoom/itd na vis.js
-// 			const { text } = editor.document.lineAt(editor.selection.active.line);
-// 			console.log(JSON.stringify(text));
-// 			if (event.contentChanges.length > 0) {
-// 					// a ovdje mogu sparsati line i poslati update za node/edge
-// 					console.log(JSON.stringify(text));
-// 				}
-// 			}
-// 		}
-// }
+function isJsonString(str: string) {
+	try {
+		JSON.parse(str);
+	} catch (e) {
+		return false;
+	}
+	return true;
+}
+// set data which will be sent to webview
 
 function setSMGraphData() {
-	// FUTURE STATES:
-	// check if SMGraph is opened
-	// check if smgraph.js is opened
-	dataLoadedInGraph = true;
-	const editor = vscode.window.activeTextEditor;
-	if (editor) {
-		const document = editor.document;
-		const documentText = JSON5.parse(document.getText());
-		return documentText;
-	}
-}
+	// ovo treba očistiti, ne treba 10 puta provjeravati istu stvar
+	// TODO najprije treba vidjeti da li je file valid JSON, ako nije (npr neka štamparska greška) treba obavijestiti o tome
+	if (vscode.window.activeTextEditor.document.uri.path.includes(".sm.json")) {
+		dataLoadedInGraph = true;
+		const editor = vscode.window.activeTextEditor;
+		var documentText;
+		if (editor) {
+			const document = editor.document;
+			//check if file is empty
+			if (document.getText() === "") {
+				vscode.window.showInformationMessage('File is empty');
+				return;
+			}
+			else {
+				// TODO najprije provjeriti, da li je valid JSON
+				if (isJsonString(document.getText())) {
+					documentText = JSON.parse(document.getText());
+					console.log("Document text (setSMGraphData): ", documentText);
+					return documentText;
+				}
+				else {
+					vscode.window.showInformationMessage('Not valid JSON, please check spelling.');
+				}
 
-function createFile() {
-	const wsedit = new vscode.WorkspaceEdit();
-	const wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath; 
-	const filePath = vscode.Uri.file(wsPath + '/new.stategraph');
-	// vscode.window.showInformationMessage(filePath.toString());
-	wsedit.createFile(filePath, { ignoreIfExists: true },{iconPath: new vscode.ThemeIcon("json"), label:"State Graph", needsConfirmation: false });
-	vscode.workspace.applyEdit(wsedit);
-	// vscode.window.showInformationMessage('Created a new file: hello/world.md');
-}
-// ovdje primam podatke iz webview-a (alt + ć)
-function getSMGraphData(data: string) {
-	const tabArray = vscode.window.tabGroups.all;
-	const firstGroupOfTabs = tabArray[0].tabs;
-	// vscode.window.showInformationMessage(firstGroupOfTabs.length.toString());
-	let tabLength = firstGroupOfTabs.length;
-	var tabIndex!: number;
-	for (var i = 0; i < tabLength; i++) {
-		if (firstGroupOfTabs[i].label === "smgraph.js") {
-			tabIndex = i;
-			// vscode.window.showInformationMessage(tabIndex.toString());
+			}
 		}
 	}
-	const smGraphTabName = firstGroupOfTabs[tabIndex].label;
-	if (smGraphTabName === "smgraph.js") {
-		const firstTabInput = (firstGroupOfTabs[tabIndex].input as vscode.TabInputText).uri;
+	else {
+		//console.log("Not sm.json file");
+	};
+}
 
-		var setting: vscode.Uri = firstTabInput;
-		vscode.workspace.openTextDocument(setting).then((a: vscode.TextDocument) => {
-			vscode.window.showTextDocument(a, 1, false).then(e => {
-				e.edit(edit => {
-					const lines = a.getText().split('\n');
-					for (let i = 0; i < lines.length; i++) {
-						const line = lines[i];
-						// console.log(i, line);
-					}
-					var firstLine = a.lineAt(0);
-					var lastLine = a.lineAt(a.lineCount - 1);
-					var textRange = new vscode.Range(firstLine.range.start, lastLine.range.end);
-					edit.delete(textRange);
-					edit.insert(new vscode.Position(0, 0), data);
+function findOpenedFiles() {
+	// WorkspaceConfiguration update workbench.editor.revealIfOpen = true
+}
+
+function findFile() {
+
+}
+
+async function createFile() {
+	const fileName = await vscode.window.showInputBox({
+		title: 'Save File',
+		prompt: 'Enter a file name (no extension):',
+		validateInput: (value) => {
+			if (value.length === 0) {
+				return 'Please enter a file name';
+			}
+			return null;
+		}
+	});
+
+	const wsedit = new vscode.WorkspaceEdit();
+	const wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	const filePath = vscode.Uri.file(wsPath + '/' + fileName + '.sm.json');
+
+	var data = `
+	{
+		"file":"${fileName}.sm.json",
+		"nodes":[],
+		"edges":[]
+	}
+	`;
+	wsedit.createFile(filePath, { ignoreIfExists: true }, { iconPath: new vscode.ThemeIcon("json"), label: "State Graph", needsConfirmation: false });
+	vscode.workspace.applyEdit(wsedit).then(success => {
+		if (success) {
+			// vscode.window.showInformationMessage('Created a new file: ' + filePath.toString());
+			// newFilePath = filePath;
+			vscode.workspace.openTextDocument(filePath).then((doc: vscode.TextDocument) => {
+				vscode.window.showTextDocument(doc, 1, false).then(doc => {
+					doc.edit(edit => {
+						edit.insert(new vscode.Position(0, 0), data);
+					});
 				});
-			});
+			})
+				.then(undefined, err => {
+					vscode.window.showErrorMessage(err);
+				});
+		} else {
+			vscode.window.showInformationMessage('Failed to create a new file: ' + filePath);
+		}
+	});
+}
+// ok, za jedan node ili edge highlight mi treba druga funkcija
+function getSMGraphNodeOrEdge(data: string) {
+	// console.log("file: ",data[0]);
+	// console.log("node: ",data[1]);
+	var dataobj = JSON.parse(data[1]);
+
+}
+// TODO ovo treba popraviti: ako je file zatvoren, imam error
+function graph2json(data: string) {
+	var dataobj = JSON.parse(data);
+	// var nodes = dataobj.nodes;
+	// var edges = dataobj.edges;
+	var file = dataobj.file;
+	console.log("graph2json data", data);
+
+	var inputs = vscode.window.tabGroups.all.flatMap(({ tabs }) => tabs.map(tab => tab.input));
+	for (var input of inputs) {
+		Object.entries(input).forEach(function ([key, value]) {
+			if (key === "uri" && value.toString().includes(file)) {
+				var setting: vscode.Uri = value.fsPath;
+				vscode.workspace.openTextDocument(setting).then((doc: vscode.TextDocument) => {
+					vscode.window.showTextDocument(doc, 1, false)
+						.then(e => {
+							e.edit(edit => {
+								const lines = doc.getText().split('\n');
+								for (let i = 0; i < lines.length; i++) {
+									const line = lines[i];
+								}
+								var firstLine = doc.lineAt(0);
+								var lastLine = doc.lineAt(doc.lineCount - 1);
+								var textRange = new vscode.Range(firstLine.range.start, lastLine.range.end);
+								edit.delete(textRange);
+								edit.insert(new vscode.Position(0, 0), data);
+							});
+						});
+				});
+				// TODO GET FILE & FOLDER
+				var folders = vscode.workspace.workspaceFolders;
+				//console.log("FOLDERS: ", folders);
+				var fd = vscode.workspace.getWorkspaceFolder;
+				//console.log("GET FOLDER: ", fd);
+			}
+			else {
+				//console.log("FILE NIJE OTVOREN: ");
+			}
 		});
 	}
 }
@@ -197,7 +299,6 @@ function reverseSelectedText() {
 }
 function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
 	return {
-		// Enable javascript in the webview
 		enableScripts: true,
 
 		// And restrict the webview to only loading content from our extension's `media` directory.
@@ -221,13 +322,14 @@ class SMGraphPanel {
 	private _disposables: vscode.Disposable[] = [];
 
 	public static createOrShow(extensionUri: vscode.Uri) {
-		const column = vscode.window.activeTextEditor
-			? vscode.window.activeTextEditor.viewColumn
-			: undefined;
+		//ovdje trebam nalovdati podatke... a promjeniti kad se mjenja file
+		const column = vscode.ViewColumn.Two;
+		//console.log("column: ", column.toString());
 
 		// If we already have a panel, show it.
 		if (SMGraphPanel.currentPanel) {
 			SMGraphPanel.currentPanel._panel.reveal(column);
+			SMGraphPanel.currentPanel.json2graph();
 			return;
 		}
 
@@ -235,7 +337,7 @@ class SMGraphPanel {
 		const panel = vscode.window.createWebviewPanel(
 			SMGraphPanel.viewType,
 			'SM Graph',
-			/*column ||*/ vscode.ViewColumn.Two,
+			vscode.ViewColumn.Two,
 			getWebviewOptions(extensionUri),
 		);
 
@@ -252,21 +354,25 @@ class SMGraphPanel {
 
 		// Set the webview's initial html content
 		this._update();
+		this.json2graph();
+		// this._loadData();
 
 		// Listen for when the panel is disposed
 		// This happens when the user closes the panel or when the panel is closed programmatically
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
 		// Handle messages from the webview
-		// ovo pošaljem iz webview-a sa sendNodesToCode
 		this._panel.webview.onDidReceiveMessage(
 			message => {
 				switch (message.command) {
 					case 'alert':
 						vscode.window.showInformationMessage(message.text);
 						return;
-					case 'nodes':
-						getSMGraphData(message.text);
+					case 'graph':
+						graph2json(message.text);
+						return;
+					case 'selected':
+						getSMGraphNodeOrEdge(message.text);
 						return;
 				}
 			},
@@ -275,11 +381,18 @@ class SMGraphPanel {
 		);
 	}
 
-	public sendDataToWebview() {
-		// E ovdje mogu poslati strukturu vis.js networka...
-		// ali kako ovu funkciju doseči izvana?
-		this._panel.webview.postMessage({ command: 'sendDataToWebview', data: setSMGraphData() });
+	public json2graph() {
+		currentEditor = vscode.window.activeTextEditor;
+		console.log("currentEditor file name (json2graph): ", currentEditor.document.fileName);
+		if (currentEditor.document.fileName.includes(".sm.json")) {
+			this._panel.webview.postMessage({ command: 'json2graph', data: setSMGraphData() });
+		}
 	}
+	// koliko razumijem, check imam več gore, prije nego to zovem
+	public addNodeToggle() { this._panel.webview.postMessage({ command: 'addNodeToogle', data: [] }); };
+	public addEdgeToggle() { this._panel.webview.postMessage({ command: 'addEdgeToogle', data: [] }); };
+	public deleteSelected() { this._panel.webview.postMessage({ command: 'deleteSelected', data: [] }); };
+	public propertiesToogle() { this._panel.webview.postMessage({ command: 'propertiesToogle', data: [] }); };
 
 	public highlightNodeOnGraph(id: string) { this._panel.webview.postMessage({ command: 'highlightNodeOnGraph', data: id }); }
 	public highlightEdgeOnGraph(id: string) { this._panel.webview.postMessage({ command: 'highlightEdgeOnGraph', data: id }); }
@@ -291,7 +404,7 @@ class SMGraphPanel {
 		// Clean up our resources
 		this._panel.dispose();
 		dataLoadedInGraph = false;
-		console.log("Panel zatvoren, dataLoadedInGraph: ", dataLoadedInGraph);
+		//console.log("Panel zatvoren, dataLoadedInGraph: ", dataLoadedInGraph);
 
 		while (this._disposables.length) {
 			const x = this._disposables.pop();
@@ -310,22 +423,23 @@ class SMGraphPanel {
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
 		//#region SCRIPTS
+
 		// Local path to main script run in the webview
 		const scriptPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js');
 		const visPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'vis-network.min.js');
+		const shortIdPathPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'short-unique-id.min.js');
 		const winboxPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'winbox.bundle.min.js');
 		const alpinePathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'alpine.min.js');
 		const fsmPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'state-machine.min.js');
-		const json5PathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'json5.min.js');
 		const dataPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'data.js');
 
 		// And the uri we use to load this script in the webview
 		const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
 		const visUri = webview.asWebviewUri(visPathOnDisk);
+		const shortIdUri = webview.asWebviewUri(shortIdPathPathOnDisk);
 		const winboxUri = webview.asWebviewUri(winboxPathOnDisk);
 		const alpineUri = webview.asWebviewUri(alpinePathOnDisk);
 		const fsmUri = webview.asWebviewUri(fsmPathOnDisk);
-		const json5Uri = webview.asWebviewUri(json5PathOnDisk);
 		const dataUri = webview.asWebviewUri(dataPathOnDisk);
 		//#endregion SCRIPTS
 
@@ -362,9 +476,9 @@ class SMGraphPanel {
 								
 				<title>SM Graph</title>	
 				<script nonce="${nonce}" src="${visUri}"></script>
+				<script nonce="${nonce}" src="${shortIdUri}"></script>
 				<script nonce="${nonce}" src="${winboxUri}"></script>
 				<script nonce="${nonce}" src="${fsmUri}"></script>
-				<script nonce="${nonce}" src="${json5Uri}"></script>
 				
 				<script nonce="${nonce}" src="${dataUri}"></script>
 				<script defer nonce="${nonce}" src="${alpineUri}"></script>
@@ -372,9 +486,22 @@ class SMGraphPanel {
 				<body>
 				<!-- #region HTLM -->
 					<div class="wrapper">
-						<div id="network"></div>
+						<div id="network" data-vscode-context='{"preventDefaultContextMenuItems": true}'></div>
 					</div>
 				<!-- #endregion HTLM -->
+				<div class="iconbar">
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><g fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M15.62 3.596L7.815 12.81l-.728-.033L4 8.382l.754-.53l2.744 3.907L14.917 3z"/><path d="m7.234 8.774l4.386-5.178L10.917 3l-4.23 4.994zm-1.55.403l.548.78l-.547-.78zm-1.617 1.91l.547.78l-.799.943l-.728-.033L0 8.382l.754-.53l2.744 3.907l.57-.672z"/></g></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><g fill="currentColor"><path d="M3 1v.5c0 .47.274.706.8 1.1l.04.03C4.314 2.985 5 3.498 5 4.5V5H4v-.5c0-.47-.274-.706-.8-1.1l-.04-.03C2.686 3.015 2 2.502 2 1.5V1zm3 0v.5c0 .47.274.706.8 1.1l.04.03C7.314 2.985 8 3.498 8 4.5V5H7v-.5c0-.47-.274-.706-.8-1.1l-.04-.03C5.686 3.015 5 2.502 5 1.5V1zm3 0v.5c0 .47.274.706.8 1.1l.04.03c.474.355 1.16.868 1.16 1.87V5h-1v-.5c0-.47-.274-.706-.8-1.1l-.04-.03C8.686 3.015 8 2.502 8 1.5V1z"/><path fill-rule="evenodd" d="m2 7l1-1h10.5a2.5 2.5 0 0 1 0 5h-.626A4.002 4.002 0 0 1 9 14H6a4 4 0 0 1-4-4zm10 3V7H3v3a3 3 0 0 0 3 3h3a3 3 0 0 0 3-3m1-3v3h.5a1.5 1.5 0 0 0 0-3z" clip-rule="evenodd"/></g></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+					<div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
+				</div>
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;

@@ -1,72 +1,114 @@
 {
-  "name": "vscode-vite-bundle",
-  "displayName": "vscode-vite-bundle",
-  "description": "",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "smGraph.start",
-        "title": "Start SM Graph session",
-        "category": "SM Graph"
-      },
-      {
-        "command": "smGraph.sendDataToWebview",
-        "title": "Send JSON to Graph",
-        "category": "SM Graph"
-      },
-      {
-        "command": "smGraph.createFile",
-        "title": "Create new file",
-        "category": "SM Graph"
-      },
-      {
-        "command": "smGraph.reverse",
-        "title": "Reverse selected text",
-        "category": "SM Graph"
-      }
+    "name": "vscode-vite-bundle",
+    "displayName": "vscode-vite-bundle",
+    "description": "",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
     ],
-    "keybindings": [
-      {
-        "key": "shift+alt+U",
-        "command": "smGraph.start"
-      },
-      {
-        "key": "shift+alt+N",
-        "command": "smGraph.createFile"
-      },
-      {
-        "key": "shift+alt+I",
-        "command": "smGraph.sendDataToWebview"
-      }
-    ]
-  },
-  "scripts": {
-    "compile": "vite build",
-    "watch": "vite build --watch",
-    "package": "vite build --mode production"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.11"
-  },
-  "dependencies": {
-    "json5": "^2.2.3"
-  }
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "menus": {
+            "editor/title/run": [
+                {
+                    "command": "smGraph.start",
+                    "group": "SM Graph",
+                    "title": "JSON to Graph",
+                    "when": "resourceFilename =~ /.*\\.sm\\.json/"
+                }
+            ],
+            "webview/context": [
+                {
+                    "command": "smGraph.start",
+                    "when": "webviewId == 'smGraph'"
+                },
+                {
+                    "command": "smGraph.sendActionToWebview",
+                    "when": "webviewId == 'smGraph'"
+                },
+                {
+                    "command": "smGraph.createFile",
+                    "when": "webviewId == 'smGraph'"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "smGraph.start",
+                "title": "Open Graph",
+                "category": "SM Graph",
+                "when": "resourceFilename =~ /.*\\.sm\\.json/",
+                "icon": {
+                    "light": "media/icons/codicon-graph.svg",
+                    "dark": "media/icons/codicon-graph.svg"
+                }
+            },
+            {
+                "command": "smGraph.json2graph",
+                "title": "Send JSON to Graph",
+                "category": "SM Graph",
+                "when": "resourceFilename =~ /.*\\.sm\\.json/"
+            },
+            {
+                "command": "smGraph.sendActionToWebview",
+                "title": "Send Action to Graph",
+                "category": "SM Graph",
+                "type": "keydown"
+            },
+            {
+                "command": "smGraph.createFile",
+                "title": "Create new file",
+                "category": "SM Graph"
+            },
+            {
+                "command": "smGraph.reverse",
+                "title": "Reverse selected text",
+                "category": "SM Graph"
+            }
+        ],
+        "keybindings": [
+            {
+                "key": "shift+alt+U",
+                "command": "smGraph.start",
+                "when": "resourceFilename =~ /.*\\.sm\\.json/"
+            },
+            {
+                "key": "alt+G",
+                "command": "smGraph.addNodeToggle"
+            },
+            {
+                "key": "shift+alt+N",
+                "command": "smGraph.createFile"
+            },
+            {
+                "key": "shift+alt+I",
+                "command": "smGraph.json2graph"
+            }
+        ]
+    },
+    "scripts": {
+        "compile": "vite build",
+        "watch": "vite build --watch",
+        "package": "vite build --mode production"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.6",
+        "@types/node": "18.x",
+        "@types/vscode": "^1.85.0",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "@vscode/codicons": "^0.0.35",
+        "@vscode/test-cli": "^0.0.4",
+        "@vscode/test-electron": "^2.3.8",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.11"
+    },
+    "dependencies": {
+        "json-fn": "^1.1.1"
+    }
 }

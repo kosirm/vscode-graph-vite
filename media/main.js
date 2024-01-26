@@ -1,17 +1,27 @@
 (function () {
     const vscode = acquireVsCodeApi();
+    //check if webview lost focuse
+    // window.addEventListener('blur', function () {
+    // console.log("webview lost focus");
+    //     vscode.postMessage({ command: 'alert', text: '🐛 I just lost my focus ' });
+    // });
+    //check if the focus is backd to webview
+    // window.addEventListener('focus', function () {
+    // console.log("webview gained focus");
+    //     vscode.postMessage({ command: 'alert', text: '🐛 I just got my focus back ' });
+    //     //send me data
+    // });
     //#region UTILS
-    // kudos to beloved jquery
+    // Homage to beloved jquery
     var $ = function (id) { return document.getElementById(id); };
     //#endregion UTILS
 
     //#region WINBOX
     var winbox = new WinBox({
-        title: "Properties", x: "10px", y: "10px", class: ["no-full"]
+        title: "Properties", x: "10px", y: "30px", class: ["no-full"], top: "26px", left: "1px", right: "1px", class: ["no-full", "no-max"]
     });
     winbox.body.innerHTML = /*html*/`
         <div id="nodes" class="">
-            <div id="fi" class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M14.5 1h-13l-.5.5v3l.5.5H2v8.5l.5.5h11l.5-.5V5h.5l.5-.5v-3zm-1 3H2V2h12v2zM3 13V5h10v8zm8-6H5v1h6z" clip-rule="evenodd"/></svg></div>
             <label class="label">Nodes</label><br>
             <input class="input" type="text" id="state_label" value="State"><br>
             <input class="input" type="color" id="state_color" value="#ae5e17"><br>
@@ -26,7 +36,7 @@
         .removeControl("wb-full")
         .removeControl("wb-close")
         .resize("300px", "200px");
-        
+
 
     function winboxToogle() {
         winbox.hidden ?
@@ -35,30 +45,42 @@
     }
 
     document.getElementById("winbox-1").addEventListener('dblclick', function (e) {
-            console.log("winbox dblclick event");
-            e.preventDefault();
-            e.stopPropagation();
-        });
+        // console.log("winbox dblclick event");
+        e.preventDefault();
+        e.stopPropagation();
+    });
     // winbox.addEventListener('dblclick', function () {
-    //     console.log("winbox dblclick");
+    // console.log("winbox dblclick");
     //     return false;
     // });
     //#endregion WINBOX
 
     //#region Keyboard shortcuts
+    // TODO ako file ne postoji, treba ga kreirat
     function prepareJSON() {
-        var jsonNodes = JSON5.stringify(nodes.get());
-        var jsonEdges = JSON5.stringify(edges.get());
-        // var jsonNodes = JSON5.stringify(nodes.get(), replaceStringWithNumber);
-        // var jsonEdges = JSON5.stringify(edges.get(), replaceStringWithNumber);
+        // var jsonNodes = JSON5.stringify(nodes.get());
+        // var jsonEdges = JSON5.stringify(edges.get());
+        var jsonNodes = JSON.stringify(nodes.get(), replaceStringWithNumber);
+        var jsonEdges = JSON.stringify(edges.get(), replaceStringWithNumber);
+        //ok, ovo je bezveze, jer taj file ne postoji ( i tako ga mogu dodat u extension.ts)
+        // console.log("File: " + file);
         // var mydata = (jsonNodes+","+jsonEdges);
-        var mydata = ('{\n"nodes":' + jsonNodes + ',\n"edges":' + jsonEdges + '\n}')
+        //ok ovo če iči u extension, a poslat ču objekt preko...
+        // možda bi stvarno bilo jednostavnije, ako pošaljem objekt preko... i tamo napravim json.stringify
+        // na taj nači bi se mogao jednostavno riješiti filename-a
+        var mydata = ('{\n"file":"' + file + '",\n"nodes":' + jsonNodes + ',\n"edges":' + jsonEdges + '\n}')
             .replace(/\],\[/g, "],\n[")
             .replace(/\[\{/g, "[\n\t\t{")
             .replace(/\},\{/g, "},\n\t\t{")
             .replace(/\}\]/g, "}\n\t]");
         // console.log(mydata);
-        console.log("json5 data:",mydata);
+        // console.log("json data:", mydata);
+        return mydata;
+    }
+
+    function sendNodesToCode(mydata) {
+        // console.log("sendNodesToCode", mydata);
+        vscode.postMessage({ command: 'graph', text: mydata });
         return mydata;
     }
 
@@ -74,28 +96,28 @@
     function toogleEdgeMode() {
         if (addEdgeModeState === false) { network.addEdgeMode(); addEdgeModeState = true; }
         else { network.disableEditMode(); addEdgeModeState = false; }
-        console.log("edge mode state: ", addEdgeModeState);
+        // console.log("edge mode state: ", addEdgeModeState);
     }
 
+    // NEKI KEYBOARD SHORTCUTI SAMO ODJEDNOM PRESTANU RADITI !!!
+    // MOŽDA TREBA SVE TO PREBACIT U package.json, da riješim jednom za uvijek taj problem....
+    // ali onda trebam poslati keyboard shortcut u webview i ovdje napraviti listener...
+    // sa time ču dobiti i to, da če keyboard shortcuti raditi svugdje...
     document.addEventListener("keydown", function (e) {
         var ctrl = (e.ctrlKey);
         var alt = (e.altKey);
         if (e.key === 's' && ctrl) { e.preventDefault();/* console.log('ctlr+s'); */ }
-        else if (e.key === 'j' && ctrl) { e.preventDefault();/* console.log('ctlr+j'); */winboxToogle(); }
-        else if (e.key === 'k' && ctrl) { e.preventDefault();/* console.log('ctlr+k'); */ console.log(extNodeArray); }
-        // else if (e.key === 'f' && ctrl) { e.preventDefault();/* console.log('ctlr+f'); */ console.log(sm.actions()); network.selectNodes([sm.state()]); }
+        else if (e.key === 'f' && ctrl) { e.preventDefault();/* console.log('ctlr+f'); */ console.log(fsm.transitions.actions); }
         else if (e.key === 'd') { e.preventDefault();/* console.log('ctlr+k'); */ network.deleteSelected(); }
-        else if (e.key === 'l' && ctrl) { e.preventDefault();/* console.log('ctlr+l'); */ network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } }); }
-        else if (e.key === 'a') { e.preventDefault();/* console.log('ctlr+m'); */ toogleEdgeMode(); }
+        else if (e.key === 'a' && alt) { e.preventDefault();/* console.log('ctlr+m'); */ toogleEdgeMode(); }
         else if (e.key === 'p') { e.preventDefault(); winboxToogle(); }
         else if (e.key === 'i' && ctrl) { e.preventDefault(); console.log(Math.max(...nodes.getIds())); }
         else if (e.key === 'u' && ctrl) { e.preventDefault();/* console.log('ctlr+u'); */ vscode.postMessage({ command: 'alert', text: '🐛 Poruka iz iframe-a u vscode ' }); }
         else if (e.key === 'h' && ctrl) { e.preventDefault();/* console.log('ctlr+u'); */ $('fi').classList.toggle("active"); }
         else if (e.key === 'z' && ctrl) { e.preventDefault();/* console.log('ctlr+z'); */ }
         else if (e.key === 'w' && alt) { e.preventDefault();/* console.log('ctlr+t'); */ focusNode(); }
-        else if (e.key === 'l' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ addEdge(); }
-        else if (e.key === 'č' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ prepareJSON(); }
-        else if (e.key === 'ć' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ sendNodesToCode(prepareJSON()); }
+        else if (e.key === 'l' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ prepareJSON(); }
+        else if (e.key === 'k' && alt) { e.preventDefault();/* console.log('ctlr+l'); */ sendNodesToCode(prepareJSON()); }
     }, false);
     //#endregion Keyboard shortcuts
 
@@ -200,31 +222,37 @@
     var selectedNodesObj;
     network.addEventListener('selectNode', function () {
         // ovdje bi mogao poslati selected Nodes za highlight u JSON
+        // send message with node id to code
+        // zapravo treba vidjeti, šta se sve može editirati, pa onda napravim jednu generičnu poruku
+        // dobro, ali ovo je nekakav početak, pošaljem samo taj jedan node preko, pa da vidim kako če iči
+
         selectedNodes = network.getSelectedNodes();
-        console.log("nodes", selectedNodes);
-        console.log("nodes+", nodes.get(selectedNodes));
-        console.log("positions: ", network.getPositions());
+        // console.log("nodes", selectedNodes);
+        // console.log("nodes+", nodes.get(selectedNodes));
+        // console.log("Ovo bi trebao biti First selected node", JSON.stringify(nodes.get(selectedNodes[0])));
+        vscode.postMessage({ command: 'selected', text: [file,JSON.stringify(nodes.get(selectedNodes[0]))] });
+        // console.log("positions: ", network.getPositions());
     });
 
     var selectedEdges;
     var selectedEdgesObj;
     network.addEventListener('selectEdge', function () {
         selectedEdges = network.getSelectedEdges();
-        console.log("edges", selectedEdges);
-        console.log("edges+", edges.get(selectedEdges));
-        console.log("all edges", edges.get());
+        // console.log("edges", selectedEdges);
+        // console.log("edges+", edges.get(selectedEdges));
+        // console.log("all edges", edges.get());
     });
 
     var hover = false;
     network.addEventListener('hoverNode', function (params) {
         hover = true;
-        console.log("hover", params.node);
+        // console.log("hover", params.node);
         // $("wb_title").innerHTML = params.node
 
     });
     network.addEventListener('blurNode', function (params) {
         hover = false;
-        console.log("blur", params.node);
+        // console.log("blur", params.node);
     });
     //#endregion Events
 
@@ -240,6 +268,9 @@
         }
     }
 
+    const uid = new ShortUniqueId({ length: 10 });
+    const actionId = new ShortUniqueId({ length: 6 });
+
     function customAddEdgeMode(from, to) {
         let filteredEdges = [];
         let allEdges = edges.get();
@@ -249,26 +280,29 @@
             }
         }
         if (filteredEdges.length === 0) {
-            var newId = Math.max(...(edges.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
-            console.log("new edge id",newId);
-            edges.update([{ id: newId, $:2,from: from, to: to, name:newId, label: "action", color: "#0078D4" }]);
+            var newId = uid.rnd();
+            var actId = actionId.rnd();
+            // console.log("new edge id", newId);
+            edges.update([{ id: newId, action: actId, label: "action", color: "#0078D4", from: from, to: to }]);
         }
     }
 
 
     function addEdge(from, to) {
         if (selectedNodes.length === 2) {
-            console.log("adding edge");
-            var newId =  Math.max(...(edges.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
-            console.log("new edge id",newId);
-            edges.update([{ id: newId, $: 2, from: selectedNodes[0], to: selectedNodes[1], name:newId, label: "action", color: "#0078D4" }]);
+            // console.log("adding edge");
+            var newId = uid.rnd();
+            var actId = actionId.rnd();
+            // console.log("new edge id", newId);
+            edges.update([{ id: newId, action: actId, label: "action", color: "#0078D4", from: selectedNodes[0], to: selectedNodes[1] }]);
         }
     }
 
+    // ok, za id mi treba nešto bolje, ovo je prilično bezveze....
     function addNode(x, y) {
-        var newId = Math.max(...(nodes.getIds().map(elem=> parseInt(elem, 10)))) + 1 + "a";
-        console.log("new node id",newId);
-        nodes.update([{ id: newId, $:1, label: 'New Node', x: x, y: y, color: "#0078D4" }]);
+        var newId = uid.rnd();
+        // console.log("new node id", newId);
+        nodes.update([{ id: newId, label: 'New Node', color: "#0078D4", x: x, y: y }]);
     }
 
     function updateNodes() {
@@ -279,78 +313,45 @@
 
     }
 
-    // send data to vscode:
-    function sendNodesToCode(data) {
-        // vscode.postMessage({command: 'nodes', text: JSON.stringify(obj)});
-        vscode.postMessage({ command: 'nodes', text: data });
-    }
-    //#endregion Node utils
 
 
-    // ok, ovdje pošaljem JSON u iframe
-    // ok, let think in terms of state
-    // first state: nothing is opened
-    // only smgraph.js is opened
-    // only smgraph is opened
-    // both are opened 
-    // da li mogu to provjeriti odavdje?
-    // ne, to bi trebao provjeriti u extension.js
-    // tamo dakle trebam postaviti logiku za slanje podataka, webview neka samo prima podatke 
+    // file name to have it here...
+    var file = null;
     window.addEventListener('message', event => {
         const message = event.data; // The json data that the extension sent
         // console.log("message: ", message.data);
         if (typeof message.data === "undefined") {
-            console.log("don't do anything for now...");
+            // console.log("don't do anything for now...");
         }
         else {
             switch (message.command) {
-                case 'sendDataToWebview':
-                    console.log(message.data);
-                    // nodeArray = message.data.nodes;
-                    // edgeArray = message.data.edges;
-                    nodes.update(message.data.nodes);
-                    edges.update(message.data.edges);
-                    //state machine
-                    // var trans = JSON.stringify(edges.get());
-                    // smtrans = JSON.parse(trans);
-                    // const rewriteList = ['label'];
-                    // const label = "label";
-                    // function replacer(key, value) {
-                    //     if (typeof value === 'object' && !value[Symbol.iterator]) {
-                    //         rewriteList.forEach(prop => {
-                    //             if (value[prop]) {
-                    //                 value.action = value[prop];
-                    //                 delete value[prop];
-                    //             }
-                    //         });
-                    //     }
-                    //     return value;
-                    // }
-                    // var newTrans = JSON.stringify(smtrans, replacer);
-                    // finalTrans = JSON.parse(newTrans);
-                    // console.log("SM Edges", finalTrans);
-                    // jssmdata = { start_states: [1], end_states: [5], transitions: finalTrans };
+                case 'json2graph':
+                    console.log("json2graph data (iframe): ", message.data);
+                    nodes.clear();
+                    edges.clear();
+                    nodes.add(message.data.nodes);
+                    edges.add(message.data.edges);
+                    file = message.data.file;
+                    // console.log("file: ", file);
+                    // FSM
+                    //! ok, ovo je bila greška, selectedNodes nema veze sa json2graph !!!
+                    // var selected = network.getSelectedNodes();
                     var transitions = edges.get();
-                    console.log("transitions: ",transitions);
-                    // const unquoted = trans.replace(/"([^"]+)":/g, '$1:');
-                    fsm = new StateMachine({init: "1a", transitions: transitions, methods: {}});
-                    console.log("ALL STATES: ",fsm.allStates());
-                    console.log("ALL TRANSITIONS: ", fsm.allTransitions());
-                    // sm = new jssm.Machine(jssmdata);
-                    // // end state machine
-                    // upravo razmišljam, da se prebacim na javascript-state-machine...
-                    // 8kb vs 350 kb je velika razlika... možda se i zato ext. tako dugo louda...?
+                    fsm = new StateMachine({ transitions: transitions, methods: {} });
                     network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
+                    // network.selectNodes(selected, { highlightEdges: false });
                     break;
                 case 'highlightNodeOnGraph':
-                    console.log("Node to highlight: ", message.data);
-                    network.unselectAll();
-                    network.selectNodes([message.data]/*, { highlightEdges: false }*/);
+                    // console.log("Node to highlight: ", message.data);
+                    // network.unselectAll();
+                    console.log("Node ID (iframe): ", message.data);
+                    network.selectNodes([message.data], { highlightEdges: false });
                     // network.fit({ nodes: [message.data], animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
                     break;
                 case 'highlightEdgeOnGraph':
-                    console.log("Edge to highlight: ", message.data);
-                    network.unselectAll();
+                    // console.log("Edge to highlight: ", message.data);
+                    // network.unselectAll();
+                    console.log("Edge ID (iframe): ", message.data);
                     network.selectEdges([message.data]);
                     // network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
                     break;
