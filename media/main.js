@@ -268,7 +268,7 @@
         }
     }
 
-    const uid = new ShortUniqueId({ length: 10 });
+    const uid = new ShortUniqueId({ length: 6 });
     const actionId = new ShortUniqueId({ length: 6 });
 
     function customAddEdgeMode(from, to) {
@@ -334,25 +334,31 @@
                     file = message.data.file;
                     // console.log("file: ", file);
                     // FSM
-                    //! ok, ovo je bila greška, selectedNodes nema veze sa json2graph !!!
+                    //! ok, ovo je bila VELIKA greška, selectedNodes nema veze sa json2graph !!!
                     // var selected = network.getSelectedNodes();
+                    // FSM
                     var transitions = edges.get();
                     fsm = new StateMachine({ transitions: transitions, methods: {} });
+                    
                     network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
                     // network.selectNodes(selected, { highlightEdges: false });
                     break;
                 case 'highlightNodeOnGraph':
                     // console.log("Node to highlight: ", message.data);
                     // network.unselectAll();
-                    console.log("Node ID (iframe): ", message.data);
+                    // console.log("Node ID (iframe): ", message.data);
                     network.selectNodes([message.data], { highlightEdges: false });
+                    // network.focus( [message.data], {scale:1, animation: { duration: 1000, easingFunction: "easeInOutQuad" }});
                     // network.fit({ nodes: [message.data], animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
                     break;
                 case 'highlightEdgeOnGraph':
                     // console.log("Edge to highlight: ", message.data);
                     // network.unselectAll();
-                    console.log("Edge ID (iframe): ", message.data);
+                    // console.log("Edge ID (iframe): ", message.data);
                     network.selectEdges([message.data]);
+                    // var nodeFrom = edges.get(message.data).from;
+                    // var nodeTo = edges.get(message.data).to;
+                    // console.log("from-to positions:", network.getPositions( [nodeFrom, nodeTo]));
                     // network.fit({ animation: { duration: 1000, easingFunction: "easeInOutQuad" } });
                     break;
             }

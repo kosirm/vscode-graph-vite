@@ -70,14 +70,17 @@ var oldActiveLine = vscode.window.activeTextEditor.selection.active.line;
 var currentEditor: vscode.TextEditor;
 var change = false;
 vscode.workspace.onDidOpenTextDocument((e) => {
+	// to če mi trebati za drugi smjer...
+	console.log("Panel Column:", panelColumn);
 	change = true;
 });
+
 vscode.workspace.onDidCloseTextDocument((e) => {
 	change = true;
 });
-// vscode.window.onDidChangeWindowState((e)=>{
-// 	change = true;
-// });
+vscode.window.onDidChangeWindowState((e)=>{
+	change = true;
+});
 vscode.window.onDidChangeActiveTextEditor((e) => {
 	change = true;
 });
@@ -92,15 +95,13 @@ const decorationType = vscode.window.createTextEditorDecorationType({
 	border: '2px solid rgba(58, 167, 58,1)',
 });
 vscode.window.onDidChangeTextEditorSelection((e) => {
-	currentEditor = vscode.window.activeTextEditor;
-	activeLine = currentEditor.selection.active.line;
 	if (SMGraphPanel.currentPanel && currentEditor.document.fileName.includes(".sm.json")) {
-		// json2graph pozovem samo, ako je file promjenjen
-		console.log("Change? ", change);
 		if (change) {
 			SMGraphPanel.currentPanel.json2graph();
 			change = false;
 		}
+		currentEditor = vscode.window.activeTextEditor;
+		activeLine = currentEditor.selection.active.line;
 		if (activeLine === oldActiveLine) { return; }
 		//console.log("Active Line: ", activeLine);
 		if (currentEditor && dataLoadedInGraph === true) {
@@ -114,7 +115,7 @@ vscode.window.onDidChangeTextEditorSelection((e) => {
 				var id = text.match(/^.*\{"id":"(.*?)"/);
 				var hid = id[1];
 				// console.log("HID (onDidChangeTextEditorSelection): ",hid);
-				SMGraphPanel.currentPanel.json2graph();
+				// SMGraphPanel.currentPanel.json2graph();
 				SMGraphPanel.currentPanel.highlightNodeOnGraph(hid);
 				// ovdje mogu zvat samo updateNode,ali zašto, ako sada radi kako treba? Pored toga gubim oldActiveLine
 			}
@@ -123,7 +124,7 @@ vscode.window.onDidChangeTextEditorSelection((e) => {
 				var id = text.match(/^.*\{"id":"(.*?)"/);
 				var hid = id[1];
 				// console.log("HID (onDidChangeTextEditorSelection): ",hid);
-				SMGraphPanel.currentPanel.json2graph();
+				// SMGraphPanel.currentPanel.json2graph();
 				SMGraphPanel.currentPanel.highlightEdgeOnGraph(hid);
 			}
 			else {
@@ -171,7 +172,7 @@ function setSMGraphData() {
 					return documentText;
 				}
 				else {
-					vscode.window.showInformationMessage('Not valid JSON, please check spelling.');
+					vscode.window.showWarningMessage('Not valid JSON, please check spelling.');
 				}
 
 			}
@@ -269,11 +270,6 @@ function graph2json(data: string) {
 							});
 						});
 				});
-				// TODO GET FILE & FOLDER
-				var folders = vscode.workspace.workspaceFolders;
-				//console.log("FOLDERS: ", folders);
-				var fd = vscode.workspace.getWorkspaceFolder;
-				//console.log("GET FOLDER: ", fd);
 			}
 			else {
 				//console.log("FILE NIJE OTVOREN: ");
@@ -305,7 +301,7 @@ function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
 		localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')]
 	};
 }
-
+var panelColumn = 2;
 /**
  * Manages  webview panels
  */
@@ -360,6 +356,20 @@ class SMGraphPanel {
 		// Listen for when the panel is disposed
 		// This happens when the user closes the panel or when the panel is closed programmatically
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+		this._panel.onDidChangeViewState((e) => {
+			switch (this._panel.viewColumn) {
+				case vscode.ViewColumn.One:
+					panelColumn = 1;
+					return;
+				case vscode.ViewColumn.Two:
+					panelColumn = 2;
+					return;
+				case vscode.ViewColumn.Three:
+					panelColumn = 3;
+					return;
+			}
+		});
 
 		// Handle messages from the webview
 		this._panel.webview.onDidReceiveMessage(
@@ -419,7 +429,6 @@ class SMGraphPanel {
 		this._panel.title = "SM Graph";
 		this._panel.webview.html = this._getHtmlForWebview(webview);
 	}
-
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
 		//#region SCRIPTS
